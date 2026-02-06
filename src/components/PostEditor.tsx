@@ -1,0 +1,187 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createPost, updatePost, uploadImage } from '@/lib/api';
+import { Post } from '@/lib/supabase';
+
+type PostEditorProps = {
+    post?: Post;
+    isEdit?: boolean;
+};
+
+export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
+    const router = useRouter();
+    const [title, setTitle] = useState(post?.title || '');
+    const [content, setContent] = useState(post?.content || '');
+    const [status, setStatus] = useState<'learning' | 'coding' | 'debugging' | 'done'>(
+        post?.status || 'learning'
+    );
+    const [tags, setTags] = useState(post?.tags.join(', ') || '');
+    const [image, setImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState(post?.image_url || '');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
+            let imageUrl = post?.image_url || null;
+
+            // 画像がアップロードされている場合
+            if (image) {
+                const uploadedUrl = await uploadImage(image);
+                if (uploadedUrl) {
+                    imageUrl = uploadedUrl;
+                }
+            }
+
+            const postData = {
+                title,
+                content,
+                status,
+                tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+                image_url: imageUrl,
+            };
+
+            if (isEdit && post) {
+                await updatePost(post.id, postData);
+            } else {
+                await createPost(postData);
+            }
+
+            router.push('/');
+            router.refresh();
+        } catch (error) {
+            console.error('Error saving post:', error);
+            alert('記事の保存に失敗しました');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+                {isEdit ? '記事を編集' : '新しい記事を投稿'}
+            </h1>
+
+            <div className="space-y-6">
+                {/* タイトル */}
+                <div>
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        タイトル
+                    </label>
+                    <input
+                        type="text"
+                        id="title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="例: Rustでブートローダーを実装した"
+                    />
+                </div>
+
+                {/* ステータス */}
+                <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        進捗ステータス
+                    </label>
+                    <select
+                        id="status"
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as any)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                        <option value="learning">📚 学習中</option>
+                        <option value="coding">💻 実装中</option>
+                        <option value="debugging">🐛 デバッグ中</option>
+                        <option value="done">✅ 完了</option>
+                    </select>
+                </div>
+
+                {/* タグ */}
+                <div>
+                    <label htmlFor="tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        タグ（カンマ区切り）
+                    </label>
+                    <input
+                        type="text"
+                        id="tags"
+                        value={tags}
+                        onChange={(e) => setTags(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="例: Rust, カーネル実装, メモリ管理"
+                    />
+                </div>
+
+                {/* 画像アップロード */}
+                <div>
+                    <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        画像（オプション）
+                    </label>
+                    <input
+                        type="file"
+                        id="image"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                    {imagePreview && (
+                        <div className="mt-4">
+                            <img src={imagePreview} alt="Preview" className="max-w-md rounded-lg shadow-md" />
+                        </div>
+                    )}
+                </div>
+
+                {/* 本文 */}
+                <div>
+                    <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        本文（Markdown形式）
+                    </label>
+                    <textarea
+                        id="content"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        required
+                        rows={20}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
+                        placeholder="Markdownで記事を書きましょう...&#10;&#10;例:&#10;## 今日やったこと&#10;&#10;```rust&#10;fn main() {&#10;    println!(&quot;Hello, OS!&quot;);&#10;}&#10;```"
+                    />
+                </div>
+
+                {/* ボタン */}
+                <div className="flex gap-4">
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                    >
+                        {isSubmitting ? '保存中...' : isEdit ? '更新する' : '投稿する'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => router.back()}
+                        className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+                    >
+                        キャンセル
+                    </button>
+                </div>
+            </div>
+        </form>
+    );
+}
