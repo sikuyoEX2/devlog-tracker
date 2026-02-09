@@ -14,6 +14,7 @@ export type Post = {
   tags: string[];
   image_url: string | null;
   study_notes_url: string | null;
+  code_file_url: string | null;
   created_at: string;
   updated_at: string;
 };

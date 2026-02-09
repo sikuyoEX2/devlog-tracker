@@ -2,8 +2,11 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createPost, updatePost, uploadImage, uploadStudyNotes } from '@/lib/api';
+import { createPost, updatePost, uploadImage, uploadStudyNotes, uploadCodeFile } from '@/lib/api';
 import { Post } from '@/lib/supabase';
+
+// Rust関連の拡張子
+const RUST_EXTENSIONS = ['.rs', '.toml', '.lock'];
 
 type PostEditorProps = {
     post?: Post;
@@ -23,6 +26,10 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
     const [studyNotesFile, setStudyNotesFile] = useState<File | null>(null);
     const [studyNotesFileName, setStudyNotesFileName] = useState<string>(
         post?.study_notes_url ? '既存のファイルあり' : ''
+    );
+    const [codeFile, setCodeFile] = useState<File | null>(null);
+    const [codeFileName, setCodeFileName] = useState<string>(
+        post?.code_file_url ? '既存のファイルあり' : ''
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,6 +51,15 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
         if (file && file.name.endsWith('.md')) {
             setStudyNotesFile(file);
             setStudyNotesFileName(file.name);
+        }
+    };
+
+    // コードファイルを選択
+    const handleCodeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && RUST_EXTENSIONS.some(ext => file.name.endsWith(ext))) {
+            setCodeFile(file);
+            setCodeFileName(file.name);
         }
     };
 
@@ -70,6 +86,7 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
         try {
             let imageUrl = post?.image_url || null;
             let studyNotesUrl = post?.study_notes_url || null;
+            let codeFileUrl = post?.code_file_url || null;
 
             // 画像がアップロードされている場合
             if (image) {
@@ -87,6 +104,14 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                 }
             }
 
+            // コードファイルがアップロードされている場合
+            if (codeFile) {
+                const uploadedUrl = await uploadCodeFile(codeFile);
+                if (uploadedUrl) {
+                    codeFileUrl = uploadedUrl;
+                }
+            }
+
             const postData = {
                 title,
                 content,
@@ -94,6 +119,7 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                 tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
                 image_url: imageUrl,
                 study_notes_url: studyNotesUrl,
+                code_file_url: codeFileUrl,
             };
 
             if (isEdit && post) {
@@ -225,6 +251,39 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                     </p>
                 </div>
 
+                {/* 今日のコード（Rustファイル） */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        🦀 今日のコード（Rustファイル）
+                    </label>
+                    <div className="w-full p-6 border-2 border-dashed border-orange-300 dark:border-orange-600 rounded-lg hover:border-orange-500 dark:hover:border-orange-400 transition-colors bg-orange-50 dark:bg-orange-900/20 cursor-pointer">
+                        <div className="text-center">
+                            {codeFileName ? (
+                                <div className="text-green-600 dark:text-green-400 mb-2">
+                                    ✅ {codeFileName}
+                                </div>
+                            ) : (
+                                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                                    .rs / .toml / .lockファイルを選択
+                                </p>
+                            )}
+                            <p className="text-gray-500 dark:text-gray-500 text-sm mb-3">Rust関連ファイル</p>
+                            <label htmlFor="codeFile" className="inline-block px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg cursor-pointer transition-colors">
+                                ファイルを選択
+                            </label>
+                            <input
+                                type="file"
+                                id="codeFile"
+                                accept=".rs,.toml,.lock"
+                                onChange={handleCodeFileChange}
+                                className="hidden"
+                            />
+                        </div>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        ※ 今日書いたコードを別タブで閲覧できるリンクとして保存されます
+                    </p>
+                </div>
                 {/* 本文 */}
                 <div>
                     <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

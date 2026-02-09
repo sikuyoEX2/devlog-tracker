@@ -76,6 +76,24 @@ export default function PostDetail({ post }: PostDetailProps) {
                 </div>
             )}
 
+            {/* 今日のコードリンク */}
+            {post.code_file_url && (
+                <div className="mb-8 p-4 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
+                    <a
+                        href={post.code_file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 text-orange-700 dark:text-orange-300 hover:text-orange-900 dark:hover:text-orange-100 transition-colors font-medium"
+                    >
+                        <span className="text-2xl">🦀</span>
+                        <span>今日のコードはこちら（Rustファイル）</span>
+                        <svg className="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                </div>
+            )}
+
             <div className="prose prose-lg dark:prose-invert max-w-none">
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}

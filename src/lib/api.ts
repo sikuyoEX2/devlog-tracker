@@ -142,3 +142,28 @@ export async function uploadStudyNotes(file: File): Promise<string | null> {
 
     return data.publicUrl;
 }
+
+// コードファイル（Rustファイル等）をアップロード
+export async function uploadCodeFile(file: File): Promise<string | null> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error } = await supabase.storage
+        .from('code-files')
+        .upload(filePath, file, {
+            contentType: 'text/plain',
+        });
+
+    if (error) {
+        console.error('Error uploading code file:', error);
+        return null;
+    }
+
+    // 公開URLを取得
+    const { data } = supabase.storage
+        .from('code-files')
+        .getPublicUrl(filePath);
+
+    return data.publicUrl;
+}

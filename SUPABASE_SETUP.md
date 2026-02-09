@@ -109,6 +109,23 @@ CREATE POLICY "Enable delete access for all users" ON posts
 ALTER TABLE posts ADD COLUMN study_notes_url TEXT;
 ```
 
+### コードファイル用バケットの追加（オプション）
+
+1. 「Create a new bucket」をクリック
+2. 以下を入力：
+   - **Name**: `code-files`
+   - **Public bucket**: チェックを入れる（ファイルを公開するため）
+3. 「Create bucket」をクリック
+
+### code_file_urlカラムの追加
+
+今日のコード機能（Rustファイルアップロード）を使用する場合、以下のSQLを実行してください：
+
+```sql
+-- コードファイルURL用のカラムを追加
+ALTER TABLE posts ADD COLUMN code_file_url TEXT;
+```
+
 ## 5. 環境変数の取得
 
 1. 左サイドバーから「Settings」→「API」を選択
