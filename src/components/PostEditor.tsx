@@ -34,6 +34,48 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
         }
     };
 
+    // Markdownファイルをアップロードして本文に展開
+    const handleMdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.name.endsWith('.md')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const mdContent = reader.result as string;
+                setContent(mdContent);
+                // タイトルが空の場合、ファイル名から自動設定
+                if (!title) {
+                    const fileName = file.name.replace(/\.md$/, '');
+                    setTitle(fileName);
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+    };
+
+    // ドラッグ&ドロップ用ハンドラ
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const file = e.dataTransfer.files?.[0];
+        if (file && file.name.endsWith('.md')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const mdContent = reader.result as string;
+                setContent(mdContent);
+                if (!title) {
+                    const fileName = file.name.replace(/\.md$/, '');
+                    setTitle(fileName);
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -146,6 +188,38 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                             <img src={imagePreview} alt="Preview" className="max-w-md rounded-lg shadow-md" />
                         </div>
                     )}
+                </div>
+
+                {/* Markdownファイルアップロード */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        📄 Markdownファイルをアップロード（オプション）
+                    </label>
+                    <div
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors bg-gray-50 dark:bg-gray-700/50 cursor-pointer"
+                    >
+                        <div className="text-center">
+                            <p className="text-gray-600 dark:text-gray-400 mb-2">
+                                .mdファイルをドラッグ&ドロップ
+                            </p>
+                            <p className="text-gray-500 dark:text-gray-500 text-sm mb-3">または</p>
+                            <label htmlFor="mdFile" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors">
+                                ファイルを選択
+                            </label>
+                            <input
+                                type="file"
+                                id="mdFile"
+                                accept=".md"
+                                onChange={handleMdFileChange}
+                                className="hidden"
+                            />
+                        </div>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        ※ ファイルを読み込むと本文に自動展開されます
+                    </p>
                 </div>
 
                 {/* 本文 */}
