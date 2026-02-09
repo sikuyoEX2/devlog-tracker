@@ -58,6 +58,24 @@ export default function PostDetail({ post }: PostDetailProps) {
                 </div>
             )}
 
+            {/* 苦労の跡リンク */}
+            {post.study_notes_url && (
+                <div className="mb-8 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                    <a
+                        href={post.study_notes_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 transition-colors font-medium"
+                    >
+                        <span className="text-2xl">📝</span>
+                        <span>苦労の跡はこちら（学習ノート）</span>
+                        <svg className="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                </div>
+            )}
+
             <div className="prose prose-lg dark:prose-invert max-w-none">
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}

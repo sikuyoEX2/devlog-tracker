@@ -92,6 +92,23 @@ CREATE POLICY "Enable delete access for all users" ON posts
    - **Public bucket**: チェックを入れる（画像を公開するため）
 4. 「Create bucket」をクリック
 
+### 学習ノート用バケットの追加（オプション）
+
+1. 「Create a new bucket」をクリック
+2. 以下を入力：
+   - **Name**: `study-notes`
+   - **Public bucket**: チェックを入れる（ファイルを公開するため）
+3. 「Create bucket」をクリック
+
+### study_notes_urlカラムの追加
+
+学習ノートファイル機能を使用する場合、以下のSQLを実行してください：
+
+```sql
+-- 学習ノートURL用のカラムを追加
+ALTER TABLE posts ADD COLUMN study_notes_url TEXT;
+```
+
 ## 5. 環境変数の取得
 
 1. 左サイドバーから「Settings」→「API」を選択

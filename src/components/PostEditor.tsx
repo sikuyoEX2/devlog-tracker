@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createPost, updatePost, uploadImage } from '@/lib/api';
+import { createPost, updatePost, uploadImage, uploadStudyNotes } from '@/lib/api';
 import { Post } from '@/lib/supabase';
 
 type PostEditorProps = {
@@ -20,6 +20,10 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
     const [tags, setTags] = useState(post?.tags.join(', ') || '');
     const [image, setImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState(post?.image_url || '');
+    const [studyNotesFile, setStudyNotesFile] = useState<File | null>(null);
+    const [studyNotesFileName, setStudyNotesFileName] = useState<string>(
+        post?.study_notes_url ? '既存のファイルあり' : ''
+    );
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,21 +38,12 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
         }
     };
 
-    // Markdownファイルをアップロードして本文に展開
-    const handleMdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 学習ノートファイルを選択
+    const handleStudyNotesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && file.name.endsWith('.md')) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const mdContent = reader.result as string;
-                setContent(mdContent);
-                // タイトルが空の場合、ファイル名から自動設定
-                if (!title) {
-                    const fileName = file.name.replace(/\.md$/, '');
-                    setTitle(fileName);
-                }
-            };
-            reader.readAsText(file, 'utf-8');
+            setStudyNotesFile(file);
+            setStudyNotesFileName(file.name);
         }
     };
 
@@ -63,16 +58,8 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
         e.stopPropagation();
         const file = e.dataTransfer.files?.[0];
         if (file && file.name.endsWith('.md')) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const mdContent = reader.result as string;
-                setContent(mdContent);
-                if (!title) {
-                    const fileName = file.name.replace(/\.md$/, '');
-                    setTitle(fileName);
-                }
-            };
-            reader.readAsText(file, 'utf-8');
+            setStudyNotesFile(file);
+            setStudyNotesFileName(file.name);
         }
     };
 
@@ -82,6 +69,7 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
 
         try {
             let imageUrl = post?.image_url || null;
+            let studyNotesUrl = post?.study_notes_url || null;
 
             // 画像がアップロードされている場合
             if (image) {
@@ -91,12 +79,21 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                 }
             }
 
+            // 学習ノートファイルがアップロードされている場合
+            if (studyNotesFile) {
+                const uploadedUrl = await uploadStudyNotes(studyNotesFile);
+                if (uploadedUrl) {
+                    studyNotesUrl = uploadedUrl;
+                }
+            }
+
             const postData = {
                 title,
                 content,
                 status,
                 tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
                 image_url: imageUrl,
+                study_notes_url: studyNotesUrl,
             };
 
             if (isEdit && post) {
@@ -190,10 +187,10 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                     )}
                 </div>
 
-                {/* Markdownファイルアップロード */}
+                {/* 学習ノートファイルアップロード（苦労の跡） */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        📄 Markdownファイルをアップロード（オプション）
+                        📝 苦労の跡（学習ノートファイル）
                     </label>
                     <div
                         onDragOver={handleDragOver}
@@ -201,24 +198,30 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                         className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors bg-gray-50 dark:bg-gray-700/50 cursor-pointer"
                     >
                         <div className="text-center">
-                            <p className="text-gray-600 dark:text-gray-400 mb-2">
-                                .mdファイルをドラッグ&ドロップ
-                            </p>
+                            {studyNotesFileName ? (
+                                <div className="text-green-600 dark:text-green-400 mb-2">
+                                    ✅ {studyNotesFileName}
+                                </div>
+                            ) : (
+                                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                                    .mdファイルをドラッグ&ドロップ
+                                </p>
+                            )}
                             <p className="text-gray-500 dark:text-gray-500 text-sm mb-3">または</p>
-                            <label htmlFor="mdFile" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors">
+                            <label htmlFor="studyNotesFile" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors">
                                 ファイルを選択
                             </label>
                             <input
                                 type="file"
-                                id="mdFile"
+                                id="studyNotesFile"
                                 accept=".md"
-                                onChange={handleMdFileChange}
+                                onChange={handleStudyNotesChange}
                                 className="hidden"
                             />
                         </div>
                     </div>
                     <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        ※ ファイルを読み込むと本文に自動展開されます
+                        ※ AIとの勉強の記録を別タブで閲覧できるリンクとして保存されます
                     </p>
                 </div>
 
