@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createPost, updatePost, uploadImage, uploadStudyNotes, uploadCodeFile } from '@/lib/api';
+import { createPost, updatePost, uploadImage, uploadStudyNotes, uploadCodeFiles } from '@/lib/api';
 import { Post } from '@/lib/supabase';
 
 // Rust関連の拡張子
@@ -23,13 +23,13 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
     const [tags, setTags] = useState(post?.tags.join(', ') || '');
     const [image, setImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState(post?.image_url || '');
-    const [studyNotesFile, setStudyNotesFile] = useState<File | null>(null);
-    const [studyNotesFileName, setStudyNotesFileName] = useState<string>(
-        post?.study_notes_url ? '既存のファイルあり' : ''
+    const [studyNotesFiles, setStudyNotesFiles] = useState<File[]>([]);
+    const [studyNotesFileNames, setStudyNotesFileNames] = useState<string[]>(
+        post?.study_notes_urls?.length ? ['既存のファイルあり'] : []
     );
-    const [codeFile, setCodeFile] = useState<File | null>(null);
-    const [codeFileName, setCodeFileName] = useState<string>(
-        post?.code_file_url ? '既存のファイルあり' : ''
+    const [codeFiles, setCodeFiles] = useState<File[]>([]);
+    const [codeFileNames, setCodeFileNames] = useState<string[]>(
+        post?.code_file_urls?.length ? ['既存のファイルあり'] : []
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,21 +45,23 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
         }
     };
 
-    // 学習ノートファイルを選択
+    // 学習ノートファイルを複数選択
     const handleStudyNotesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file && file.name.endsWith('.md')) {
-            setStudyNotesFile(file);
-            setStudyNotesFileName(file.name);
+        const files = Array.from(e.target.files || []).filter(f => f.name.endsWith('.md'));
+        if (files.length > 0) {
+            setStudyNotesFiles(prev => [...prev, ...files]);
+            setStudyNotesFileNames(prev => [...prev, ...files.map(f => f.name)]);
         }
     };
 
-    // コードファイルを選択
-    const handleCodeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file && RUST_EXTENSIONS.some(ext => file.name.endsWith(ext))) {
-            setCodeFile(file);
-            setCodeFileName(file.name);
+    // コードファイルを複数選択
+    const handleCodeFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []).filter(f =>
+            RUST_EXTENSIONS.some(ext => f.name.endsWith(ext))
+        );
+        if (files.length > 0) {
+            setCodeFiles(prev => [...prev, ...files]);
+            setCodeFileNames(prev => [...prev, ...files.map(f => f.name)]);
         }
     };
 
@@ -69,13 +71,25 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
         e.stopPropagation();
     };
 
-    const handleDrop = (e: React.DragEvent) => {
+    const handleStudyNotesDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        const file = e.dataTransfer.files?.[0];
-        if (file && file.name.endsWith('.md')) {
-            setStudyNotesFile(file);
-            setStudyNotesFileName(file.name);
+        const files = Array.from(e.dataTransfer.files || []).filter(f => f.name.endsWith('.md'));
+        if (files.length > 0) {
+            setStudyNotesFiles(prev => [...prev, ...files]);
+            setStudyNotesFileNames(prev => [...prev, ...files.map(f => f.name)]);
+        }
+    };
+
+    const handleCodeFilesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const files = Array.from(e.dataTransfer.files || []).filter(f =>
+            RUST_EXTENSIONS.some(ext => f.name.endsWith(ext))
+        );
+        if (files.length > 0) {
+            setCodeFiles(prev => [...prev, ...files]);
+            setCodeFileNames(prev => [...prev, ...files.map(f => f.name)]);
         }
     };
 
@@ -85,8 +99,8 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
 
         try {
             let imageUrl = post?.image_url || null;
-            let studyNotesUrl = post?.study_notes_url || null;
-            let codeFileUrl = post?.code_file_url || null;
+            let studyNotesUrls = post?.study_notes_urls || [];
+            let codeFileUrls = post?.code_file_urls || [];
 
             // 画像がアップロードされている場合
             if (image) {
@@ -97,19 +111,15 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
             }
 
             // 学習ノートファイルがアップロードされている場合
-            if (studyNotesFile) {
-                const uploadedUrl = await uploadStudyNotes(studyNotesFile);
-                if (uploadedUrl) {
-                    studyNotesUrl = uploadedUrl;
-                }
+            if (studyNotesFiles.length > 0) {
+                const uploadedUrls = await uploadStudyNotes(studyNotesFiles);
+                studyNotesUrls = [...studyNotesUrls, ...uploadedUrls];
             }
 
             // コードファイルがアップロードされている場合
-            if (codeFile) {
-                const uploadedUrl = await uploadCodeFile(codeFile);
-                if (uploadedUrl) {
-                    codeFileUrl = uploadedUrl;
-                }
+            if (codeFiles.length > 0) {
+                const uploadedUrls = await uploadCodeFiles(codeFiles);
+                codeFileUrls = [...codeFileUrls, ...uploadedUrls];
             }
 
             const postData = {
@@ -118,8 +128,8 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                 status,
                 tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
                 image_url: imageUrl,
-                study_notes_url: studyNotesUrl,
-                code_file_url: codeFileUrl,
+                study_notes_urls: studyNotesUrls,
+                code_file_urls: codeFileUrls,
             };
 
             if (isEdit && post) {
@@ -220,17 +230,22 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                     </label>
                     <div
                         onDragOver={handleDragOver}
-                        onDrop={handleDrop}
+                        onDrop={handleStudyNotesDrop}
                         className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors bg-gray-50 dark:bg-gray-700/50 cursor-pointer"
                     >
                         <div className="text-center">
-                            {studyNotesFileName ? (
+                            {studyNotesFileNames.length > 0 ? (
                                 <div className="text-green-600 dark:text-green-400 mb-2">
-                                    ✅ {studyNotesFileName}
+                                    ✅ {studyNotesFileNames.length}件のファイル選択済み
+                                    <ul className="text-left mt-2 text-sm">
+                                        {studyNotesFileNames.map((name, i) => (
+                                            <li key={i} className="truncate">• {name}</li>
+                                        ))}
+                                    </ul>
                                 </div>
                             ) : (
                                 <p className="text-gray-600 dark:text-gray-400 mb-2">
-                                    .mdファイルをドラッグ&ドロップ
+                                    .mdファイルをドラッグ&ドロップ（複数可）
                                 </p>
                             )}
                             <p className="text-gray-500 dark:text-gray-500 text-sm mb-3">または</p>
@@ -241,6 +256,7 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                                 type="file"
                                 id="studyNotesFile"
                                 accept=".md"
+                                multiple
                                 onChange={handleStudyNotesChange}
                                 className="hidden"
                             />
@@ -256,15 +272,24 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         🦀 今日のコード（Rustファイル）
                     </label>
-                    <div className="w-full p-6 border-2 border-dashed border-orange-300 dark:border-orange-600 rounded-lg hover:border-orange-500 dark:hover:border-orange-400 transition-colors bg-orange-50 dark:bg-orange-900/20 cursor-pointer">
+                    <div
+                        onDragOver={handleDragOver}
+                        onDrop={handleCodeFilesDrop}
+                        className="w-full p-6 border-2 border-dashed border-orange-300 dark:border-orange-600 rounded-lg hover:border-orange-500 dark:hover:border-orange-400 transition-colors bg-orange-50 dark:bg-orange-900/20 cursor-pointer"
+                    >
                         <div className="text-center">
-                            {codeFileName ? (
+                            {codeFileNames.length > 0 ? (
                                 <div className="text-green-600 dark:text-green-400 mb-2">
-                                    ✅ {codeFileName}
+                                    ✅ {codeFileNames.length}件のファイル選択済み
+                                    <ul className="text-left mt-2 text-sm">
+                                        {codeFileNames.map((name, i) => (
+                                            <li key={i} className="truncate">• {name}</li>
+                                        ))}
+                                    </ul>
                                 </div>
                             ) : (
                                 <p className="text-gray-600 dark:text-gray-400 mb-2">
-                                    .rs / .toml / .lockファイルを選択
+                                    .rs / .toml / .lockファイルをドラッグ&ドロップ（複数可）
                                 </p>
                             )}
                             <p className="text-gray-500 dark:text-gray-500 text-sm mb-3">Rust関連ファイル</p>
@@ -275,7 +300,8 @@ export default function PostEditor({ post, isEdit = false }: PostEditorProps) {
                                 type="file"
                                 id="codeFile"
                                 accept=".rs,.toml,.lock"
-                                onChange={handleCodeFileChange}
+                                multiple
+                                onChange={handleCodeFilesChange}
                                 className="hidden"
                             />
                         </div>

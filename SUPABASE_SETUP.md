@@ -100,13 +100,13 @@ CREATE POLICY "Enable delete access for all users" ON posts
    - **Public bucket**: チェックを入れる（ファイルを公開するため）
 3. 「Create bucket」をクリック
 
-### study_notes_urlカラムの追加
+### study_notes_urlsカラムの追加
 
-学習ノートファイル機能を使用する場合、以下のSQLを実行してください：
+学習ノートファイル機能（複数ファイル対応）を使用する場合、以下のSQLを実行してください：
 
 ```sql
--- 学習ノートURL用のカラムを追加
-ALTER TABLE posts ADD COLUMN study_notes_url TEXT;
+-- 学習ノートURLs用の配列カラムを追加
+ALTER TABLE posts ADD COLUMN study_notes_urls TEXT[] DEFAULT '{}';
 ```
 
 ### コードファイル用バケットの追加（オプション）
@@ -117,13 +117,13 @@ ALTER TABLE posts ADD COLUMN study_notes_url TEXT;
    - **Public bucket**: チェックを入れる（ファイルを公開するため）
 3. 「Create bucket」をクリック
 
-### code_file_urlカラムの追加
+### code_file_urlsカラムの追加
 
-今日のコード機能（Rustファイルアップロード）を使用する場合、以下のSQLを実行してください：
+今日のコード機能（複数Rustファイルアップロード）を使用する場合、以下のSQLを実行してください：
 
 ```sql
--- コードファイルURL用のカラムを追加
-ALTER TABLE posts ADD COLUMN code_file_url TEXT;
+-- コードファイルURLs用の配列カラムを追加
+ALTER TABLE posts ADD COLUMN code_file_urls TEXT[] DEFAULT '{}';
 ```
 
 ## 5. 環境変数の取得

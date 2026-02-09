@@ -118,52 +118,64 @@ export async function getPostsByTag(tag: string): Promise<Post[]> {
     return data || [];
 }
 
-// 学習ノート（Markdownファイル）をアップロード
-export async function uploadStudyNotes(file: File): Promise<string | null> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
+// 学習ノート（Markdownファイル）を複数アップロード
+export async function uploadStudyNotes(files: File[]): Promise<string[]> {
+    const urls: string[] = [];
 
-    const { error } = await supabase.storage
-        .from('study-notes')
-        .upload(filePath, file, {
-            contentType: 'text/markdown',
-        });
+    for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-    if (error) {
-        console.error('Error uploading study notes:', error);
-        return null;
+        const { error } = await supabase.storage
+            .from('study-notes')
+            .upload(filePath, file, {
+                contentType: 'text/markdown',
+            });
+
+        if (error) {
+            console.error('Error uploading study notes:', error);
+            continue;
+        }
+
+        // 公開URLを取得
+        const { data } = supabase.storage
+            .from('study-notes')
+            .getPublicUrl(filePath);
+
+        urls.push(data.publicUrl);
     }
 
-    // 公開URLを取得
-    const { data } = supabase.storage
-        .from('study-notes')
-        .getPublicUrl(filePath);
-
-    return data.publicUrl;
+    return urls;
 }
 
-// コードファイル（Rustファイル等）をアップロード
-export async function uploadCodeFile(file: File): Promise<string | null> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
+// コードファイル（Rustファイル等）を複数アップロード
+export async function uploadCodeFiles(files: File[]): Promise<string[]> {
+    const urls: string[] = [];
 
-    const { error } = await supabase.storage
-        .from('code-files')
-        .upload(filePath, file, {
-            contentType: 'text/plain',
-        });
+    for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-    if (error) {
-        console.error('Error uploading code file:', error);
-        return null;
+        const { error } = await supabase.storage
+            .from('code-files')
+            .upload(filePath, file, {
+                contentType: 'text/plain',
+            });
+
+        if (error) {
+            console.error('Error uploading code file:', error);
+            continue;
+        }
+
+        // 公開URLを取得
+        const { data } = supabase.storage
+            .from('code-files')
+            .getPublicUrl(filePath);
+
+        urls.push(data.publicUrl);
     }
 
-    // 公開URLを取得
-    const { data } = supabase.storage
-        .from('code-files')
-        .getPublicUrl(filePath);
-
-    return data.publicUrl;
+    return urls;
 }

@@ -13,8 +13,8 @@ export type Post = {
   status: 'learning' | 'coding' | 'debugging' | 'done';
   tags: string[];
   image_url: string | null;
-  study_notes_url: string | null;
-  code_file_url: string | null;
+  study_notes_urls: string[];
+  code_file_urls: string[];
   created_at: string;
   updated_at: string;
 };
